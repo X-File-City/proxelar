@@ -1,0 +1,250 @@
+{
+  "id": "proxelar-architecture",
+  "title": "Proxelar: HTTPS Proxy Architecture",
+  "description": "A guided walkthrough of Proxelar's workspace structure, proxy engine, TLS MITM system, Lua scripting, and multi-mode interfaces.",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "id": "overview",
+      "title": "Welcome to Proxelar",
+      "description": "Proxelar is an HTTPS proxy with man-in-the-middle capabilities for inspecting encrypted traffic. The workspace is organized into three crates with a strict dependency direction: the CLI depends on the proxy engine, which depends on the data models. Configuration, containerization, and CI workflows live at the root alongside documentation.",
+      "focusDirectory": "",
+      "colorMode": "fileTypes"
+    },
+    {
+      "id": "data-models",
+      "title": "Data Models (proxyapi_models)",
+      "description": "The foundation layer defines pure data types for captured requests and responses. These are fully serializable with no async runtime or network dependencies, and unsafe code is forbidden. This crate serves as the shared vocabulary between the proxy engine and all interface modes.",
+      "focusDirectory": "proxyapi_models",
+      "colorMode": "fileTypes",
+      "highlightLayers": [
+        {
+          "id": "models-core",
+          "name": "Core Data Types",
+          "color": "#8b5cf6",
+          "items": [
+            { "path": "proxyapi_models/src/lib.rs", "type": "file" }
+          ],
+          "opacity": 0.7,
+          "renderStrategy": "border"
+        },
+        {
+          "id": "models-tests",
+          "name": "Serialization Tests",
+          "color": "#22c55e",
+          "items": [
+            { "path": "proxyapi_models/tests/serialization.rs", "type": "file" }
+          ],
+          "opacity": 0.7,
+          "renderStrategy": "border"
+        }
+      ]
+    },
+    {
+      "id": "proxy-engine",
+      "title": "Proxy Engine (proxyapi)",
+      "description": "The core engine handles forward and reverse proxying, HTTPS interception, certificate generation, and Lua scripting. Captured traffic flows through a bounded event channel to whichever interface is active. Supporting modules provide the universal body type and a stream wrapper that replays buffered bytes for protocol detection.",
+      "focusDirectory": "proxyapi/src",
+      "colorMode": "fileTypes",
+      "highlightLayers": [
+        {
+          "id": "proxy-impl",
+          "name": "Proxy Implementations",
+          "color": "#3b82f6",
+          "items": [
+            { "path": "proxyapi/src/proxy", "type": "directory" }
+          ],
+          "opacity": 0.7,
+          "renderStrategy": "border"
+        },
+        {
+          "id": "ca-system",
+          "name": "Certificate Authority",
+          "color": "#f59e0b",
+          "items": [
+            { "path": "proxyapi/src/ca", "type": "directory" }
+          ],
+          "opacity": 0.7,
+          "renderStrategy": "border"
+        },
+        {
+          "id": "event-handler",
+          "name": "Event & Handler",
+          "color": "#10b981",
+          "items": [
+            { "path": "proxyapi/src/event.rs", "type": "file" },
+            { "path": "proxyapi/src/handler.rs", "type": "file" }
+          ],
+          "opacity": 0.7,
+          "renderStrategy": "border"
+        },
+        {
+          "id": "body-rewind",
+          "name": "Body & Rewind Utilities",
+          "color": "#a855f7",
+          "items": [
+            { "path": "proxyapi/src/body.rs", "type": "file" },
+            { "path": "proxyapi/src/rewind.rs", "type": "file" }
+          ],
+          "opacity": 0.7,
+          "renderStrategy": "border"
+        }
+      ]
+    },
+    {
+      "id": "request-flow",
+      "title": "Forward Proxy & MITM",
+      "description": "The forward proxy accepts connections and spawns a handler for each one. CONNECT requests trigger an upgrade, then the first bytes are peeked to detect the protocol: TLS handshakes trigger interception with a generated leaf certificate, plain HTTP is served directly, and other protocols are tunneled raw.",
+      "focusDirectory": "proxyapi/src/proxy",
+      "colorMode": "fileTypes",
+      "highlightLayers": [
+        {
+          "id": "forward-proxy",
+          "name": "Forward Proxy",
+          "color": "#3b82f6",
+          "items": [
+            { "path": "proxyapi/src/proxy/forward.rs", "type": "file" }
+          ],
+          "opacity": 0.8,
+          "renderStrategy": "border"
+        },
+        {
+          "id": "reverse-proxy",
+          "name": "Reverse Proxy",
+          "color": "#ef4444",
+          "items": [
+            { "path": "proxyapi/src/proxy/reverse.rs", "type": "file" }
+          ],
+          "opacity": 0.8,
+          "renderStrategy": "border"
+        }
+      ]
+    },
+    {
+      "id": "tls-and-certs",
+      "title": "CA & TLS Certificate Management",
+      "description": "This module generates and caches TLS certificates for traffic interception. A root CA key pair is created on first run and stored locally. Per-host leaf certificates are cached in memory with a capacity of 1,000. A built-in download server intercepts requests to the proxel.ar hostname, serving certificate downloads and install instructions.",
+      "focusDirectory": "proxyapi/src/ca",
+      "colorMode": "fileTypes",
+      "highlightLayers": [
+        {
+          "id": "ca-core",
+          "name": "CA Core",
+          "color": "#f59e0b",
+          "items": [
+            { "path": "proxyapi/src/ca/mod.rs", "type": "file" }
+          ],
+          "opacity": 0.8,
+          "renderStrategy": "border"
+        },
+        {
+          "id": "cert-server",
+          "name": "Certificate Download Server",
+          "color": "#06b6d4",
+          "items": [
+            { "path": "proxyapi/src/ca/cert_server.rs", "type": "file" }
+          ],
+          "opacity": 0.8,
+          "renderStrategy": "border"
+        }
+      ]
+    },
+    {
+      "id": "lua-scripting",
+      "title": "Lua Scripting",
+      "description": "An optional feature, enabled by default, that lets users write Lua scripts with request and response hooks. Scripts are loaded at proxy startup and called for every request/response pair. Errors are logged but never crash the proxy. The highlighted examples demonstrate common customizations like injecting headers, blocking domains, and mocking API responses.",
+      "focusDirectory": "",
+      "colorMode": "fileTypes",
+      "highlightLayers": [
+        {
+          "id": "scripting-engine",
+          "name": "Scripting Engine",
+          "color": "#f97316",
+          "items": [
+            { "path": "proxyapi/src/scripting.rs", "type": "file" }
+          ],
+          "opacity": 0.8,
+          "renderStrategy": "border"
+        },
+        {
+          "id": "scripts",
+          "name": "Example Scripts",
+          "color": "#fbbf24",
+          "items": [
+            { "path": "examples/scripts", "type": "directory" }
+          ],
+          "opacity": 0.7,
+          "renderStrategy": "border"
+        }
+      ]
+    },
+    {
+      "id": "cli-interfaces",
+      "title": "CLI & Interface Modes",
+      "description": "The binary entry point offers three interface modes: Terminal for colored log output, TUI for an interactive terminal dashboard, and Web GUI for a browser-based interface with live WebSocket streaming. Command-line flags control the mode, port, bind address, and script path.",
+      "focusDirectory": "proxelar-cli/src",
+      "colorMode": "fileTypes",
+      "highlightLayers": [
+        {
+          "id": "cli-entry",
+          "name": "CLI Entry & Config",
+          "color": "#ec4899",
+          "items": [
+            { "path": "proxelar-cli/src/main.rs", "type": "file" },
+            { "path": "proxelar-cli/src/cli.rs", "type": "file" }
+          ],
+          "opacity": 0.8,
+          "renderStrategy": "border"
+        },
+        {
+          "id": "interfaces",
+          "name": "Interface Implementations",
+          "color": "#6366f1",
+          "items": [
+            { "path": "proxelar-cli/src/interface", "type": "directory" }
+          ],
+          "opacity": 0.7,
+          "renderStrategy": "border"
+        }
+      ]
+    },
+    {
+      "id": "testing",
+      "title": "Integration Tests",
+      "description": "Integration tests cover the forward proxy, reverse proxy, certificate authority, and certificate download server. Tests use real TLS connections rather than mocks, ensuring behavior matches production. The data models crate separately tests serialization round-trips.",
+      "focusDirectory": "proxyapi/tests",
+      "colorMode": "fileTypes",
+      "highlightLayers": [
+        {
+          "id": "proxy-tests",
+          "name": "Proxy Tests",
+          "color": "#22c55e",
+          "items": [
+            { "path": "proxyapi/tests/forward_proxy.rs", "type": "file" },
+            { "path": "proxyapi/tests/reverse_proxy.rs", "type": "file" }
+          ],
+          "opacity": 0.7,
+          "renderStrategy": "border"
+        },
+        {
+          "id": "cert-tests",
+          "name": "Certificate Tests",
+          "color": "#f59e0b",
+          "items": [
+            { "path": "proxyapi/tests/cert_authority.rs", "type": "file" },
+            { "path": "proxyapi/tests/cert_server.rs", "type": "file" }
+          ],
+          "opacity": 0.7,
+          "renderStrategy": "border"
+        }
+      ]
+    },
+    {
+      "id": "full-picture",
+      "title": "The Complete Architecture",
+      "description": "The three-crate workspace follows a clean dependency graph: the data models layer provides shared types, the proxy engine implements interception, certificates, scripting, and events, and the CLI layer wires it all together with multiple interface modes.",
+      "focusDirectory": "",
+      "colorMode": "fileTypes"
+    }
+  ]
+}
